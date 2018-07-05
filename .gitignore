@@ -1,6 +1,8 @@
 #Ignoring data-folder (saves, guild/user-settings)
 data/
 
+package-lock.json
+
 
 
 # NODE-TEMPLATE:
