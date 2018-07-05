@@ -1,3 +1,9 @@
+#Ignoring data-folder (saves, guild/user-settings)
+data/
+
+
+
+# NODE-TEMPLATE:
 # Logs
 logs
 *.log
