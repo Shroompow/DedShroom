@@ -7,9 +7,10 @@ class Module extends Events {
 	 * @param {State} state The Bot-State
 	 * @param {string} name Name of the module
 	 */
-	constructor(state, name) {
+	constructor(state, name,nsfw=false) {
 		this.state = state;
 		this.name = name;
+		this.nsfw = nsfw;
 	}
 }
 
