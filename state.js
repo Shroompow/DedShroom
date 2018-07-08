@@ -29,7 +29,7 @@ class State {
 	 */
 	start(token){
 		return Promise((resolve,reject)=>{
-			if(running){resolve();return;}
+			if(this.running){resolve();return;}
 			console.log("Starting State");
 			//Loading indexes
 			var languagesIndex;
@@ -102,7 +102,7 @@ class State {
 	 */
 	exit(force=false){
 		return Promise((resolve)=>{
-			if(!running){resolve();}
+			if(!this.running){resolve();}
 
 			console.log(`Exiting State (force:${force})`);
 
