@@ -1,9 +1,8 @@
 #Ignoring data-folder (saves, guild/user-settings)
 data/
+test.js
 
 package-lock.json
-
-
 
 # NODE-TEMPLATE:
 # Logs
