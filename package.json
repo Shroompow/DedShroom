@@ -1,5 +1,8 @@
 {
-	"dependencies":{
-		"discord.js" : ">=11.3.2"
+	"dependencies": {
+		"discord.js": ">=11.3.2"
+	},
+	"devDependencies": {
+		"tui-jsdoc-template": "^1.2.2"
 	}
 }
