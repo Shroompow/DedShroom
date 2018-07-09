@@ -1,5 +1,6 @@
 /**
  * Post-Functions
+ * @private
  */
 var formatPosts = {
 	"int": (input, ...args)=>{
