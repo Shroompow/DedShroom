@@ -75,6 +75,16 @@ function formatGetInEnv(arg,env){
  * @param {string} str String to be formatted.
  * @param {object} env Environment used for inserting variables.
  * @returns {string} A new formatted string.
+ * @example
+```js
+format(
+	"Look at this number:${x}\nThat object has ${foo%len} properties\nFooBar: ${foo.bar}",
+	{x: 234, foo:{bar:"is cute",andso:"on"}}
+);
+//Look at this number:234
+//That object has 2 properties
+//FooBar: is cute
+```
  */
 module.exports.format = (str, env) => {
 	var out = "";
@@ -140,4 +150,41 @@ module.exports.format = (str, env) => {
 	}
 
 	return out;
+}
+
+/**
+ * Splits a string into an Array arguments respecting quotes.
+ * @param {string} str String to split
+ * @returns {Array.<string>} Array of arguments
+ * @example
+```js
+argSplit('use item "poisonous mushroom" on "dead bird"');
+//["use", "item", "poisonous mushroom", "on", "dead bird"]
+```
+*/
+module.exports.argSplit = (str)=>{
+	var split = [];
+	var argParse = (start,endChar)=>{
+		var end = str.indexOf(endChar,start);
+		end = end == -1 ? str.length : end;
+		var arg = str.slice(start,end);
+		if(arg.length>0){
+			split.push(arg);
+		}
+		return end;
+	}
+	for(var i = 0;i < str.length;i++){
+		var c = str.charAt(i);
+		if(c!=" "){
+			var arg;
+			if(c=='"'){
+				i = argParse(i+1,'"');
+			}else if(c=="'"){
+				i = argParse(i+1,"'");
+			}else{
+				i = argParse(i," ");
+			}
+		}
+	}
+	return split;
 }
