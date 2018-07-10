@@ -1,7 +1,15 @@
-logging = require('../dedshroom/utils/logging.js')
+const logging = require('../dedshroom/utils/logging.js')
+const config = require('../dedshroom/config.json')
 
 var one = logging.get('one')
 var two = logging.get('two')
+
+var [converted_level, _] = Object.entries(logging.LEVEL).find(([key, val]) => val === logging.level)
+
+console.log('global loglevel: ' + converted_level)
+console.log('config loglevel: ' + config.log_level)
+console.log('\n')
+
 
 two.level = logging.LEVEL.DEBUG
 

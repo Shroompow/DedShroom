@@ -1,5 +1,6 @@
 const formatter = require('./format.js');
 const consts = require('../constants.js');
+const config = require('../config.json');
 
 LEVEL = {
 	DEBUG: 1,
@@ -15,7 +16,9 @@ class LogManager {
 	 * @param {string} [format] String to be used to format messages.
 	 * @param {number} [level] Minimum Level required to show messages.
 	 */
-	constructor(format = consts.LOGGER_FORMAT, level = LEVEL.INFO) {
+	constructor(format = consts.LOGGER_FORMAT, level = LEVEL[config.log_level]) {
+		// if no (valid) level is defined in config, use INFO
+		level = level === undefined ? LEVEL.INFO : level;
 		this.cache = [];
 		this.format = format;
 		this.level = Math.min(level, LEVEL.MAX);
@@ -57,9 +60,9 @@ class LogManager {
 
 /**
  * build an env to use for formatter.format()
- * @param {string} namespace 
- * @param {number} level 
- * @param {string} message 
+ * @param {string} namespace
+ * @param {number} level
+ * @param {string} message
  * @private
  */
 function makeEnv(namespace, level, message = '') {
@@ -147,7 +150,7 @@ class Logger {
 	/**
 	 * Logs a Message at specified Level.
 	 * @param {number} level Level to log at. See
-	 * @param {string} msg 
+	 * @param {string} msg
 	 */
 	log(level, msg = '') {
 		// don't log if silenced
@@ -160,14 +163,14 @@ class Logger {
 					console.log(logMessage);
 				else
 					console.error(logMessage);
-				
+
 			}
 		}
 	}
 
 	/**
 	 * Shorthand for logging at DEBUG-Level
-	 * @param {string} msg 
+	 * @param {string} msg
 	 */
 	debug(msg = '') {
 		this.log(LEVEL.DEBUG, msg);
@@ -175,7 +178,7 @@ class Logger {
 
 	/**
 	 * Shorthand for logging at INFO-Level
-	 * @param {string} msg 
+	 * @param {string} msg
 	 */
 	info(msg = '') {
 		this.log(LEVEL.INFO, msg);
@@ -183,7 +186,7 @@ class Logger {
 
 	/**
 	 * Shorthand for logging at WARNING-Level
-	 * @param {string} msg 
+	 * @param {string} msg
 	 */
 	warning(msg = '') {
 		this.log(LEVEL.WARNING, msg);
@@ -191,7 +194,7 @@ class Logger {
 
 	/**
 	 * Shorthand for logging at CRITICAL-Level
-	 * @param {string} msg 
+	 * @param {string} msg
 	 */
 	critical(msg = '') {
 		this.log(LEVEL.CRITICAL, msg);
