@@ -6,5 +6,5 @@ But before connecting to our roots please read these guidelines so we can mainta
 
 ### Code Style
 
-- We use **semicolons**
+- We use **semicolons**. They can make Syntax-Mistakes easier spottable.
 - Synchronous calls can halt the runtime, increasing the bots response-times. Prefer **asynchronous calls**.
