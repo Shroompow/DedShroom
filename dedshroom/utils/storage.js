@@ -1,24 +1,51 @@
 const fs = require('fs');
 const path = require('path');
 const consts = require('../constants.js');
+const fmt = require('./format.js')
 const logging = require('./logging.js')
 const config = require('../config.json');
 
 const log = logging.get('StorageManager');
 log.level = logging.LEVEL.DEBUG
 
+STORAGE_TYPE = {
+  USER : 0,
+  GUILD : 1,
+  CHANNEL : 2,
+  MODULE : 3,
+  DEFAULT: 4
+}
+
+TYPE_INFO = [
+  {path: 'users/${id}', initData: {}},
+  {path: 'guilds/${id}', initData: {}},
+  {path: 'channels/${id}', initData: {}},
+  {path: 'modules/${id}', initData: {}},
+  {path: '${id}', initData: {}}
+]
+
+function win32ToPosix(path) {
+  return path.replace(/([A-Za-z]):\\/, '/$1/').replace(/\\/g, '/');
+}
+
+function posixToWin32(path) {
+  return path.replace(/\/([A-Za-z])\//, '$1:\\').replace(/\//g, '\\');
+}
+
 // https://stackoverflow.com/a/5344074
 function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+// https://stackoverflow.com/a/1144249
 function areEqual(o1, o2) {
   return JSON.stringify(o1) === JSON.stringify(o2);
 }
 
 class Handle {
-  constructor(path, manager) {
-    this.path = path;
+  constructor(path, initData, manager) {
+    this.path = path
+    this.initData = initData;
     this.manager = manager;
     this._locked = false;
   }
@@ -27,7 +54,7 @@ class Handle {
     return new Promise((resolve, reject) => {
       this.awaitUnlock().then(() => {
         this._lock();
-        this.manager.getData(this.path).then((data) => {
+        this.manager.getData(this.path, this.initData).then((data) => {
           // copy data
           var dataCopy = deepCopy(data)
 
@@ -63,6 +90,34 @@ class Handle {
     });
   }
 
+  getHandle(...args) {
+    // need to remove root dir from path because it'll get added by
+    // Handle constructor
+    var unrootedPath = this.path.replace(this.manager.root, '')
+    var dir = path.posix.dirname(unrootedPath);
+    var file = path.posix.basename(unrootedPath).replace('.json', '')
+    // add handle path as first argument to getHandle
+    // makes this handle the "root" of the new one
+    args.unshift(dir + '/' + file);
+    return this.manager.getHandle(...args);
+  }
+
+  getUserHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.USER, ...args);
+  }
+
+  getGuildHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.GUILD, ...args);
+  }
+
+  getChannelHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.CHANNEL, ...args);
+  }
+
+  getModuleHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.MODULE, ...args);
+  }
+
   _lock() {
     this._locked = true;
   }
@@ -93,35 +148,105 @@ class Handle {
 
 class StorageManager {
   constructor(root) {
-    // TODO: don't blindly accept path but convert it
-    var storage_path = typeof config.storage_path !== undefined ? config.storage_path : 'data';
-    this.root = typeof root !== undefined ? root : storage_path;
+    var storage_path = config.storage_path !== undefined ? config.storage_path : 'data';
+    this.root = root !== undefined ? win32ToPosix(root) : win32ToPosix(storage_path);
 
     this.cache = {};
-    this.handlers = {};
+    this.handles = {};
   }
 
-  getHandle(path) {
-    var res = this.handlers[path];
-    if (!res) {
-      res = new Handle(path, this);
-      this.handlers[path] = res;
+  getHandle(...args) {
+    var handlePath = '${id}';
+    var info = TYPE_INFO[STORAGE_TYPE.DEFAULT];
+    var filename = args.pop();
+
+    // construct the path out of chained storage types / strings
+    for (var arg of args) {
+      if (typeof arg === 'number') {
+        var type = Math.min(arg, STORAGE_TYPE.DEFAULT);
+        info = TYPE_INFO[type];
+        handlePath = fmt.format(handlePath, {id: info.path});
+      } else {
+        // make sure the string has a trailing / and add the ${id} formatting
+        var dirString = arg.toString().replace(/\/$/, '') + '/';
+        handlePath = fmt.format(handlePath, {id: dirString + '${id}'});
+      }
     }
-    return res
+
+    // add the filename
+    handlePath = fmt.format(handlePath, {id: filename});
+    handlePath = handlePath + '.json';
+
+    // add root
+    var fullPath = path.posix.join(this.root, handlePath);
+    log.debug('adding handler with path: ' + fullPath)
+
+    var res = this.handles[fullPath];
+    if (!res) {
+      res = new Handle(fullPath, info.initData, this);
+      this.handles[fullPath] = res;
+    }
+    return res;
   }
 
-  initFile(path, important=false) {
-    return new Promise((resolve, reject) => {
-      fs.writeFile(path, '{}', (err) => {
-        if (err) reject(err);
+  getUserHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.USER, ...args);
+  }
 
-        this.cache[path] = {data: {}, important};
-        resolve(this.cache[path].data);
+  getGuildHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.GUILD, ...args);
+  }
+
+  getChannelHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.CHANNEL, ...args);
+  }
+
+  getModuleHandle(...args) {
+    return this.getHandle(STORAGE_TYPE.MODULE, ...args);
+  }
+
+  initFile(filePath, data={}, important=false) {
+    return new Promise((resolve, reject) => {
+      fs.writeFile(filePath, JSON.stringify(data), (err) => {
+        if (err) {
+          // if directories don't exist, create them
+          if (err.code === 'ENOENT') {
+            var dirPath = path.posix.dirname(filePath);
+            var dirs = dirPath.split('/');
+            var tmp = '';
+            log.debug('creating missing dirs')
+            for (var dir of dirs) {
+              tmp = tmp + dir + '/';
+              try {
+                fs.mkdirSync(tmp);
+              } catch (e) {
+                if (e.code === 'EEXIST') {
+                  continue;
+                } else {
+                  reject(e);
+                  return;
+                }
+              }
+            }
+            // try to write the file again after constucting directory
+            fs.writeFile(filePath, JSON.stringify(data), (err) => {
+              if (err) {
+                reject(err);
+                return;
+                }
+              });
+            } else {
+              reject(err);
+              return;
+            }
+          }
+          this.cache[filePath] = {data, important};
+          resolve(this.cache[filePath].data);
       });
     });
   }
 
-  getData(path, important=false) {
+  getData(path, initData={}, important=false) {
     return new Promise((resolve, reject) => {
       var cached = this.cache[path];
       var data;
@@ -134,10 +259,10 @@ class StorageManager {
             // if file could not be found
             if (err.code === 'ENOENT') {
               // init the file
-              this.initFile(path, important).then((data) => {
+              this.initFile(path, initData, important).then((data) => {
                 resolve(data);
               }, (err) => {
-                reject(data);
+                reject(err);
               });
             // this should not happen maybe
             } else {
@@ -158,7 +283,7 @@ class StorageManager {
                 log.critical('Found corrupted data in file "' + path + '"!');
                 log.critical('Reiniting!');
 
-                this.initFile(path, important).then((data) => {
+                this.initFile(path, initData, important).then((data) => {
                   resolve(data);
                 }, (err) => {
                   reject(err);
