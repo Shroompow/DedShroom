@@ -158,7 +158,7 @@ class Logger {
 			// check if the log level is enabled
 			if (level >= this.level) {
 				var env = makeEnv(this.namespace, level, msg.toString());
-				var logMessage = formatter.format(this.manager.format, env);
+				var logMessage = this.manager.format.format(env);
 				if(level<LEVEL.WARNING)
 					console.log(logMessage);
 				else

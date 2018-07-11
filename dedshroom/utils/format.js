@@ -122,7 +122,7 @@ module.exports.format = (str, env) => {
 
 			//Is at least one injectorpart present
 			if(injectorParts.length>0&&injectorParts[0]){
-				//Get 
+				//Get
 				var v = formatGetInEnv(injectorParts[0],env);
 				if(v!==undefined){
 					for(var i = 1;i < injectorParts.length;i++){
@@ -150,6 +150,16 @@ module.exports.format = (str, env) => {
 	}
 
 	return out;
+}
+
+/**
+ * Formats a string. Same as original format function, implanted into
+ * the String prototype.
+ * @param {object} env Environment used for inserting variables.
+ * @returns {string} A new formatted string.
+ */
+String.prototype.format = function(env) {
+	return module.exports.format(this, env);
 }
 
 /**
