@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 const consts = require('../constants.js');
-const fmt = require('./format.js')
-const logging = require('./logging.js')
+const fmt = require('./format.js');
+const logging = require('./logging.js');
 const config = require('../config.json');
 
 const log = logging.get('StorageManager');
-log.level = logging.LEVEL.DEBUG
+log.level = logging.LEVEL.DEBUG;
 
 STORAGE_TYPE = {
   USER : 0,
@@ -44,7 +44,7 @@ function areEqual(o1, o2) {
 
 class Handle {
   constructor(path, initData, manager) {
-    this.path = path
+    this.path = path;
     this.initData = initData;
     this.manager = manager;
     this._locked = false;
@@ -56,13 +56,13 @@ class Handle {
         this._lock();
         this.manager.getData(this.path, this.initData).then((data) => {
           // copy data
-          var dataCopy = deepCopy(data)
+          var dataCopy = deepCopy(data);
 
           // run data modification
           if (typeof modify === 'function') {
-            log.debug('before modify: ' + JSON.stringify(data))
+            log.debug('before modify: ' + JSON.stringify(data));
             modify(data);
-            log.debug('after modify: ' + JSON.stringify(data))
+            log.debug('after modify: ' + JSON.stringify(data));
           }
 
           // make data read-only for .then
@@ -75,7 +75,7 @@ class Handle {
               this._unlock();
               resolve(frozen);
             }, (err) => {
-              // this souldn't ever happen
+              // this shouldn't ever happen
               reject(err);
             });
           } else {
@@ -93,9 +93,9 @@ class Handle {
   getHandle(...args) {
     // need to remove root dir from path because it'll get added by
     // Handle constructor
-    var unrootedPath = this.path.replace(this.manager.root, '')
+    var unrootedPath = this.path.replace(this.manager.root, '');
     var dir = path.posix.dirname(unrootedPath);
-    var file = path.posix.basename(unrootedPath).replace('.json', '')
+    var file = path.posix.basename(unrootedPath).replace('.json', '');
     // add handle path as first argument to getHandle
     // makes this handle the "root" of the new one
     args.unshift(dir + '/' + file);
@@ -179,7 +179,7 @@ class StorageManager {
 
     // add root
     var fullPath = path.posix.join(this.root, handlePath);
-    log.debug('adding handler with path: ' + fullPath)
+    log.debug('adding handler with path: ' + fullPath);
 
     var res = this.handles[fullPath];
     if (!res) {
@@ -214,7 +214,7 @@ class StorageManager {
             var dirPath = path.posix.dirname(filePath);
             var dirs = dirPath.split('/');
             var tmp = '';
-            log.debug('creating missing dirs')
+            log.debug('creating missing dirs');
             for (var dir of dirs) {
               tmp = tmp + dir + '/';
               try {
@@ -325,4 +325,4 @@ class StorageManager {
   }
 }
 
-module.exports = new StorageManager()
+module.exports = new StorageManager();
