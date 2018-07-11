@@ -4,7 +4,7 @@ const consts = require('../constants.js');
 const logging = require('./logging.js')
 const config = require('../config.json');
 
-const log = logging.get('StorageManager')
+const log = logging.get('StorageManager');
 log.level = logging.LEVEL.DEBUG
 
 // https://stackoverflow.com/a/5344074
@@ -16,38 +16,62 @@ class Handler {
   constructor(path, manager) {
     this.path = path;
     this.manager = manager;
-    this.locked = false
+    this._locked = false;
   }
 
   access(callback) {
-    this.manager.getData(this.path, (err, data) => {
-      // copy data
-      var dataCopy;
-      if (!err) {
-          dataCopy = deepCopy(data);
-      }
+    this.awaitUnlock().then(() => {
+      this._lock();
+      this.manager.getData(this.path).then((data) => {
+        // copy data
+        var dataCopy = deepCopy(data)
 
-      // run callback
-      callback(err, data);
+        // run callback
+        callback(undefined, data);
 
-      // save file if data has been altered
-      if (data !== dataCopy) {
-        log.debug(this.path + ' has been altered! Saving.')
-        this.lock()
-        this.manager.saveData(this.path, data, (err) => {
-          this.unlock()
-          if (err) throw err;
+        // save file if data has been altered
+        if (data !== dataCopy) {
+          log.debug(this.path + ' has been altered! Saving.')
+          this.manager.saveData(this.path, data).then(() => {
+            this._unlock();
+          }, (err) => {
+            throw err;
+          });
+        } else {
+          this._unlock();
+        }
+      }, (err) => {
+          this._unlock()
+          callback(err);
         });
+      });
+    }
+
+  _lock() {
+    this._locked = true;
+  }
+
+  _unlock() {
+    this._locked = false;
+  }
+
+  isLocked() {
+    return this._locked;
+  }
+
+  awaitUnlock() {
+    var ctx = this;
+    return new Promise(resolve => {
+      function check() {
+        if (ctx.isLocked()) {
+          log.debug('Handle "' + ctx.path + '" is locked! Checking again in 100ms!')
+          setTimeout(check, 100);
+        } else {
+          resolve();
+        }
       }
+      check();
     });
-  }
-
-  lock() {
-    this.locked = true;
-  }
-
-  unlock() {
-    this.locked = false;
   }
 }
 
@@ -70,70 +94,91 @@ class StorageManager {
     return res
   }
 
-  initFile(path, callback, important=false) {
-    fs.writeFile(path, '{}', (err) => {
-      if (err) callback(err);
+  initFile(path, important=false) {
+    return new Promise((resolve, reject) => {
+      fs.writeFile(path, '{}', (err) => {
+        if (err) reject(err);
 
-      this.cache[path] = {data: {}, important};
-      callback(undefined, {});
+        this.cache[path] = {data: {}, important};
+        resolve(this.cache[path].data);
+      });
     });
   }
 
-  getData(path, callback, important=false) {
-    var cached = this.cache[path];
-    var data;
+  getData(path, important=false) {
+    return new Promise((resolve, reject) => {
+      var cached = this.cache[path];
+      var data;
 
-    // file is not cached
-    if (cached === undefined) {
-      // try to read the file
-      fs.readFile(path, (err, data) => {
-        if (err) {
-          // if file could not be found
-          if (err.code === 'ENOENT') {
-            // init the file
-            this.initFile(path, callback, important)
-          // this should not happen maybe
-          } else {
-            throw err;
-          }
-        // if file loaded
-        } else {
-          try {
-            // try to parse data and add to cache
-            data = JSON.parse(data);
-            this.cache[path] = {data, important};
-
-            callback(undefined, data)
-          } catch (e) {
-            // init the file if JSON is corrupted
-            if (e instanceof SyntaxError) {
-              log.critical('Found corrupted data in file "' + path + '"!');
-              log.critical('Reiniting!');
-
-              this.initFile(path, callback, important);
+      // file is not cached
+      if (cached === undefined) {
+        // try to read the file
+        fs.readFile(path, (err, data) => {
+          if (err) {
+            // if file could not be found
+            if (err.code === 'ENOENT') {
+              // init the file
+              this.initFile(path, important).then((data) => {
+                resolve(data);
+              }, (err) => {
+                reject(data);
+              });
+            // this should not happen maybe
             } else {
-                callback(e)
+              log.critical('Unknown error: ' + err);
+              reject(err);
+            }
+          // if file loaded
+          } else {
+            try {
+              // try to parse data and add to cache
+              data = JSON.parse(data);
+              this.cache[path] = {data, important};
+
+              resolve(data);
+            } catch (e) {
+              // init the file if JSON is corrupted
+              if (e instanceof SyntaxError) {
+                log.critical('Found corrupted data in file "' + path + '"!');
+                log.critical('Reiniting!');
+
+                this.initFile(path, important).then((data) => {
+                  resolve(data);
+                }, (err) => {
+                  reject(err);
+                });
+              } else {
+                  reject(e);
+              }
             }
           }
-        }
-      })
-    // if file is cached
-    } else {
-      log.debug(path + ' found cached')
-      callback(undefined, cached.data);
-    }
+        });
+      // if file is cached
+      } else {
+        log.debug(path + ' found cached');
+        resolve(cached.data);
+      }
+    });
   }
 
-  saveData(path, data, callback) {
-    var dataString = JSON.stringify(data);
-    fs.writeFile(path, dataString, (err) => {
-      if (err) callback(err);
-
-      if (!this.cache[path]) {
-        this.cache[path] = {data, important: false};
-      } else {
-        this.cache[path].data = data;
+  saveData(path, data) {
+    return new Promise((resolve, reject) => {
+      try {
+        var dataString = JSON.stringify(data);
+      } catch (e) {
+        reject(e);
       }
+
+      fs.writeFile(path, dataString, (err) => {
+        if (err) reject(err);
+
+        if (!this.cache[path]) {
+          this.cache[path] = {data, important: false};
+        } else {
+          this.cache[path].data = data;
+        }
+        resolve();
+      });
     });
   }
 }
