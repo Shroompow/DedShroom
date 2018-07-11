@@ -12,7 +12,7 @@ function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-class Handler {
+class Handle {
   constructor(path, manager) {
     this.path = path;
     this.manager = manager;
@@ -85,10 +85,10 @@ class StorageManager {
     this.handlers = {};
   }
 
-  getHandler(path) {
+  getHandle(path) {
     var res = this.handlers[path];
     if (!res) {
-      res = new Handler(path, this);
+      res = new Handle(path, this);
       this.handlers[path] = res;
     }
     return res
