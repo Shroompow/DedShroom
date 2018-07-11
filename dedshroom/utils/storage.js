@@ -12,6 +12,10 @@ function deepCopy(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function areEqual(o1, o2) {
+  return JSON.stringify(o1) === JSON.stringify(o2);
+}
+
 class Handle {
   constructor(path, manager) {
     this.path = path;
@@ -19,33 +23,45 @@ class Handle {
     this._locked = false;
   }
 
-  access(callback) {
-    this.awaitUnlock().then(() => {
-      this._lock();
-      this.manager.getData(this.path).then((data) => {
-        // copy data
-        var dataCopy = deepCopy(data)
+  access(modify) {
+    return new Promise((resolve, reject) => {
+      this.awaitUnlock().then(() => {
+        this._lock();
+        this.manager.getData(this.path).then((data) => {
+          // copy data
+          var dataCopy = deepCopy(data)
 
-        // run callback
-        callback(undefined, data);
+          // run data modification
+          if (typeof modify === 'function') {
+            log.debug('before modify: ' + JSON.stringify(data))
+            modify(data);
+            log.debug('after modify: ' + JSON.stringify(data))
+          }
 
-        // save file if data has been altered
-        if (data !== dataCopy) {
-          log.debug(this.path + ' has been altered! Saving.')
-          this.manager.saveData(this.path, data).then(() => {
+          // make data read-only for .then
+          var frozen = Object.freeze(data);
+
+          // save file if data has been altered
+          if (!areEqual(data, dataCopy)) {
+            log.debug(this.path + ' has been altered! Saving.')
+            this.manager.saveData(this.path, data).then(() => {
+              this._unlock();
+              resolve(frozen);
+            }, (err) => {
+              // this souldn't ever happen
+              reject(err);
+            });
+          } else {
             this._unlock();
-          }, (err) => {
-            throw err;
+            resolve(frozen);
+          }
+        }, (err) => {
+            this._unlock()
+            reject(err);
           });
-        } else {
-          this._unlock();
-        }
-      }, (err) => {
-          this._unlock()
-          callback(err);
-        });
       });
-    }
+    });
+  }
 
   _lock() {
     this._locked = true;
@@ -60,11 +76,11 @@ class Handle {
   }
 
   awaitUnlock() {
-    var ctx = this;
     return new Promise(resolve => {
-      function check() {
-        if (ctx.isLocked()) {
-          log.debug('Handle "' + ctx.path + '" is locked! Checking again in 100ms!')
+      // check revursively whether the handler is unlocked
+      const check = () => {
+        if (this.isLocked()) {
+          log.debug('Handle "' + this.path + '" is locked! Checking again in 100ms!')
           setTimeout(check, 100);
         } else {
           resolve();
@@ -156,7 +172,8 @@ class StorageManager {
       // if file is cached
       } else {
         log.debug(path + ' found cached');
-        resolve(cached.data);
+        // need to serve a copy of cached.data or else changes won't be detected
+        resolve(deepCopy(cached.data));
       }
     });
   }
