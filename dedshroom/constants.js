@@ -9,5 +9,8 @@ module.exports = {
 	FILE_MODULES : "./modules/modules.js",
 	FILE_LANGUAGES : "./lang/languages.js",
 
-	LOGGER_FORMAT : "[${level}] - ${date%utc} - ${namespace}: ${message}"
+	LOGGER_FORMAT : "[${level}] - ${date%utc} - ${namespace}: ${message}",
+
+	FORMAT_QUOTES : ['„', '“', '‘', '’', '‚', '”', '„', '‛', '"', '\''],
+	FORMAT_QUOTE_PAIRS : [['„', '“'], ['‘', '’'], ['‚', '‘'], ['“', '”']]
 }

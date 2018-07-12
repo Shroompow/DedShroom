@@ -1,3 +1,5 @@
+const consts = require('../constants.js');
+
 /**
  * Post-Functions
  * @private
@@ -172,27 +174,29 @@ argSplit('use item "poisonous mushroom" on "dead bird"');
 //["use", "item", "poisonous mushroom", "on", "dead bird"]
 ```
 */
-module.exports.argSplit = (str)=>{
+module.exports.argSplit = (str) => {
 	var split = [];
-	var argParse = (start,endChar)=>{
-		var end = str.indexOf(endChar,start);
+	var argParse = (start, endChar) => {
+		var end = str.indexOf(endChar, start);
 		end = end == -1 ? str.length : end;
-		var arg = str.slice(start,end);
-		if(arg.length>0){
+		var arg = str.slice(start, end);
+		if (arg.length > 0) {
 			split.push(arg);
 		}
 		return end;
 	}
-	for(var i = 0;i < str.length;i++){
+	for (var i = 0; i < str.length; i++) {
 		var c = str.charAt(i);
-		if(c!=" "){
+		if(c != " ") {
 			var arg;
-			if(c=='"'){
-				i = argParse(i+1,'"');
-			}else if(c=="'"){
-				i = argParse(i+1,"'");
-			}else{
-				i = argParse(i," ");
+			var quote = consts.FORMAT_QUOTES.find(q => q === c);
+			var pair = consts.FORMAT_QUOTE_PAIRS.find(([start, end]) => start === quote);
+			if (pair !== undefined) {
+				i = argParse(i + 1, pair[1]);
+			} else if (quote !== undefined) {
+				i = argParse(i + 1, quote);
+			} else {
+				i = argParse(i, " ");
 			}
 		}
 	}
