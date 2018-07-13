@@ -19,6 +19,13 @@ class CommandData {
 			msg:msg
 		});
 	}
+	/**
+	 * 
+	 * @param {string} str String to parse
+	 */
+	static parse(str){
+
+	}
 }
 
 module.exports = CommandData;
