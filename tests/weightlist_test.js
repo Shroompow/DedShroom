@@ -78,3 +78,24 @@ for (var i = 0; i < tests; i++) {
 }
 
 logTest("C");
+
+
+/**
+ * D
+ */
+
+startNewTest();
+
+l = new WeightList([
+	{x:() => { aCount++ },y:0.1},
+	{x:() => { bCount++ },y:1},
+	{x:() => { cCount++ },y:5}
+]);
+
+var tests = 10000;
+for (var i = 0; i < tests; i++) {
+	var f = l.getWeighted(Math.random());
+	f();
+}
+
+logTest("D");
