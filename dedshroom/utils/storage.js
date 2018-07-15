@@ -55,6 +55,10 @@ class Handle {
     return this._important;
   }
 
+  isCached() {
+    return this.manager.isCached(this.path);
+  }
+
   toggleImportant(state) {
     if (typeof state !== 'boolean') {
       this._important = !this._important;
@@ -100,6 +104,16 @@ class Handle {
             this._unlock()
             reject(err);
           });
+      });
+    });
+  }
+
+  purge() {
+    return new Promise((resolve, reject) => {
+      this.manager.purgeCached(this.path).then(() => {
+        resolve();
+      }, (err) => {
+        reject(err);
       });
     });
   }
@@ -318,11 +332,10 @@ class StorageManager {
 
   getData(path, initData={}, important=false) {
     return new Promise((resolve, reject) => {
-      var cached = this.cache[path];
       var data;
 
       // file is not cached
-      if (cached === undefined) {
+      if (!this.isCached(path)) {
         // try to read the file
         fs.readFile(path, (err, data) => {
           if (err) {
@@ -398,6 +411,56 @@ class StorageManager {
     if (this.cache[path] !== undefined) {
       this.cache[path]['important'] = state;
     }
+  }
+
+  isCached(path) {
+    return this.cache[path] !== undefined;
+  }
+
+  hasHandle(path) {
+    return this.handles[path] !== undefined;
+  }
+
+  purgeCached(path) {
+    return new Promise((resolve, reject) => {
+      log.debug('trying to purge "' + path + '"')
+      if (this.isCached(path)) {
+        // need to await lock on the handle and then lock if the handle exists
+        if (this.hasHandle(path)) {
+          var handle = this.handles[path];
+          handle.awaitUnlock().then(() => {
+            handle._lock();
+
+            // save latest data
+            var cached = this.cache[path];
+            this.saveData(path, cached.data).then(() => {
+              handle._unlock();
+              this.cache[path] = undefined;
+              resolve();
+            }, (err) => {
+              log.critical('An error occured while saving "' + path + '"!');
+              log.critical(err);
+              handle._unlock();
+              reject(err);
+            });
+          });
+        } else {
+          // no handle that we have to wait on
+          var cached = this.cache[path];
+          this.saveData(path, cached.data).then(() => {
+            this.cache[path] = undefined;
+            resolve(err);
+          }, (err) => {
+            log.critical('An error occured while saving "' + path + '"!');
+            log.critical(err);
+            reject(err);
+          });
+        }
+      } else {
+        log.warning('Can\'t purge "' + path + '" because it\'s not cached!')
+        resolve();
+      }
+    });
   }
 }
 
