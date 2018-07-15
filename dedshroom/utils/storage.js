@@ -43,18 +43,32 @@ function areEqual(o1, o2) {
 }
 
 class Handle {
-  constructor(path, initData, manager) {
+  constructor(path, initData, important, manager) {
     this.path = path;
     this.initData = initData;
     this.manager = manager;
+    this._important = important;
     this._locked = false;
+  }
+
+  isImportant() {
+    return this._important;
+  }
+
+  toggleImportant(state) {
+    if (typeof state !== 'boolean') {
+      this._important = !this._important;
+    } else {
+      this._important = state;
+    }
+    this.manager.updateImportant(this.path, this._important);
   }
 
   access(modify) {
     return new Promise((resolve, reject) => {
       this.awaitUnlock().then(() => {
         this._lock();
-        this.manager.getData(this.path, this.initData).then((data) => {
+        this.manager.getData(this.path, this.initData, this._important).then((data) => {
           // copy data
           var dataCopy = deepCopy(data);
 
@@ -90,7 +104,11 @@ class Handle {
     });
   }
 
-  getHandle(...args) {
+  getHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
     // need to remove root dir from path because it'll get added by
     // Handle constructor
     var unrootedPath = this.path.replace(this.manager.root, '');
@@ -99,23 +117,43 @@ class Handle {
     // add handle path as first argument to getHandle
     // makes this handle the "root" of the new one
     args.unshift(dir + '/' + file);
-    return this.manager.getHandle(...args);
+    return this.manager.getHandle(important, ...args);
   }
 
-  getUserHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.USER, ...args);
+  getUserHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.USER, ...args);
   }
 
-  getGuildHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.GUILD, ...args);
+  getGuildHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.GUILD, ...args);
   }
 
-  getChannelHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.CHANNEL, ...args);
+  getChannelHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.CHANNEL, ...args);
   }
 
-  getModuleHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.MODULE, ...args);
+  getModuleHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.MODULE, ...args);
   }
 
   _lock() {
@@ -155,10 +193,18 @@ class StorageManager {
     this.handles = {};
   }
 
-  getHandle(...args) {
+  getHandle(important=false, ...args) {
+    // make the important flag optional
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+    log.debug('handle is important: ' + important.toString())
+
     var handlePath = '${id}';
     var info = TYPE_INFO[STORAGE_TYPE.DEFAULT];
-    var filename = args.pop();
+    // strip .json extension
+    var filename = args.pop().replace('.json', '');
 
     // construct the path out of chained storage types / strings
     for (var arg of args) {
@@ -183,26 +229,46 @@ class StorageManager {
 
     var res = this.handles[fullPath];
     if (!res) {
-      res = new Handle(fullPath, info.initData, this);
+      res = new Handle(fullPath, info.initData, important, this);
       this.handles[fullPath] = res;
     }
     return res;
   }
 
-  getUserHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.USER, ...args);
+  getUserHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.USER, ...args);
   }
 
-  getGuildHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.GUILD, ...args);
+  getGuildHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.GUILD, ...args);
   }
 
-  getChannelHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.CHANNEL, ...args);
+  getChannelHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.CHANNEL, ...args);
   }
 
-  getModuleHandle(...args) {
-    return this.getHandle(STORAGE_TYPE.MODULE, ...args);
+  getModuleHandle(important=false, ...args) {
+    if (typeof important !== 'boolean') {
+      args.unshift(important);
+      important = false;
+    }
+
+    return this.getHandle(important, STORAGE_TYPE.MODULE, ...args);
   }
 
   initFile(filePath, data={}, important=false) {
@@ -215,14 +281,18 @@ class StorageManager {
             var dirs = dirPath.split('/');
             var tmp = '';
             log.debug('creating missing dirs');
+            // loop over all dirs in order
             for (var dir of dirs) {
+              // add new dir as a subdir of previous
               tmp = tmp + dir + '/';
               try {
                 fs.mkdirSync(tmp);
               } catch (e) {
                 if (e.code === 'EEXIST') {
+                  // if it already exists, ignore
                   continue;
                 } else {
+                  // something's really wrong
                   reject(e);
                   return;
                 }
@@ -322,6 +392,12 @@ class StorageManager {
         resolve();
       });
     });
+  }
+
+  updateImportant(path, state) {
+    if (this.cache[path] !== undefined) {
+      this.cache[path]['important'] = state;
+    }
   }
 }
 
