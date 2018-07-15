@@ -6,7 +6,6 @@ const logging = require('./logging.js');
 const config = require('../config.json');
 
 const log = logging.get('StorageManager');
-log.level = logging.LEVEL.DEBUG;
 
 STORAGE_TYPE = {
   USER : 0,
@@ -24,25 +23,58 @@ TYPE_INFO = [
   {path: '${id}', initData: {}}
 ]
 
+/**
+* Converts a windows path to a posix path.
+* @param {string} path The path to convert.
+* @returns {string}
+*/
 function win32ToPosix(path) {
   return path.replace(/([A-Za-z]):\\/, '/$1/').replace(/\\/g, '/');
 }
 
+/**
+* Converts a posix path to a windows path.
+* @param {string} path The path to convert.
+* @returns {string}
+*/
 function posixToWin32(path) {
   return path.replace(/\/([A-Za-z])\//, '$1:\\').replace(/\//g, '\\');
 }
 
-// https://stackoverflow.com/a/5344074
+/**
+* Creates a recursive copy of an object.
+* NOTE: Only JSON serializable attributes will be copied!
+*       Plain Date() objects will not be copied correctly this way!
+* @param {object} obj The object to create a copy of.
+* @returns {object}
+*/
 function deepCopy(obj) {
+  // https://stackoverflow.com/a/5344074
   return JSON.parse(JSON.stringify(obj));
 }
 
-// https://stackoverflow.com/a/1144249
+/**
+* Checks whether two objects are equal.
+* NOTE: Only JSON serializable attributes will be compared!
+*       Order of attributes is important!
+* @param {object} o1 The first object.
+* @param {object} o2 The second object.
+* @returns {boolean}
+*/
 function areEqual(o1, o2) {
+  // https://stackoverflow.com/a/1144249
   return JSON.stringify(o1) === JSON.stringify(o2);
 }
 
 class Handle {
+  /**
+ * Constructs a Handle. There is no need to create these.
+ * These will be created by the StorageManager instance.
+ * @param {string} path Path to the file this handle is for.
+ * @param {object} initData Inital data if the file needs to be created.
+ * @param {boolean} important Whether this file is important.
+ * @param {StorageManager} manager Reference to the StorageManager that created this handle.
+ */
   constructor(path, initData, important, manager) {
     this.path = path;
     this.initData = initData;
@@ -51,14 +83,28 @@ class Handle {
     this._locked = false;
   }
 
+  /**
+  * Checks whether the file is important.
+  * @returns {boolean}
+  */
   isImportant() {
     return this._important;
   }
 
+  /**
+  * Checks whether the file is cached.
+  * @returns {boolean}
+  */
   isCached() {
     return this.manager.isCached(this.path);
   }
 
+  /**
+  * Toggles the important flag to the opposite of the current state or
+  * the state passed in through @param {boolean} [state]
+  * @param {boolean} [state] The state to toggle the important flag to.
+  * @returns {boolean}
+  */
   toggleImportant(state) {
     if (typeof state !== 'boolean') {
       this._important = !this._important;
@@ -68,6 +114,11 @@ class Handle {
     this.manager.updateImportant(this.path, this._important);
   }
 
+  /**
+  * Grants access to the data stored in the file.
+  * @param {function} [modify] The function that takes the file's data as its parameter.
+  * @returns {Promise}
+  */
   access(modify) {
     return new Promise((resolve, reject) => {
       this.awaitUnlock().then(() => {
@@ -108,6 +159,10 @@ class Handle {
     });
   }
 
+  /**
+  * Purges the file from cache.
+  * @returns {Promise}
+  */
   purge() {
     return new Promise((resolve, reject) => {
       this.manager.purgeCached(this.path).then(() => {
@@ -118,6 +173,15 @@ class Handle {
     });
   }
 
+  /**
+ * Gets the Handle for a file that is inside of this Handle's directory.
+ * Not yet created handles will be created and stored.
+ * @param {boolean} [important] Whether this file is important or not.
+ * @param {string or STORAGE_TYPE} ... The path to the file to open.
+ *    Can be many strings or STORAGE_TYPEs chained after another.
+ *    Last string is the filename.
+ * @returns {Handle} The created or cached Handle.
+ */
   getHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -134,6 +198,9 @@ class Handle {
     return this.manager.getHandle(important, ...args);
   }
 
+  /**
+  * Shorthand for getting a USER storage handle.
+  */
   getUserHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -143,6 +210,9 @@ class Handle {
     return this.getHandle(important, STORAGE_TYPE.USER, ...args);
   }
 
+  /**
+  * Shorthand for getting a GUILD storage handle.
+  */
   getGuildHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -152,6 +222,9 @@ class Handle {
     return this.getHandle(important, STORAGE_TYPE.GUILD, ...args);
   }
 
+  /**
+  * Shorthand for getting a CHANNEL storage handle.
+  */
   getChannelHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -161,6 +234,9 @@ class Handle {
     return this.getHandle(important, STORAGE_TYPE.CHANNEL, ...args);
   }
 
+  /**
+  * Shorthand for getting a MODULE storage handle.
+  */
   getModuleHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -170,18 +246,34 @@ class Handle {
     return this.getHandle(important, STORAGE_TYPE.MODULE, ...args);
   }
 
+  /**
+  * @private
+  * Locks the handle to avoid data corruption.
+  */
   _lock() {
     this._locked = true;
   }
 
+  /**
+  * @private
+  * Unlocks the handle.
+  */
   _unlock() {
     this._locked = false;
   }
 
+  /**
+  * Checks whether the file is currently locked:
+  * @returns {boolean}
+  */
   isLocked() {
     return this._locked;
   }
 
+  /**
+  * Waits until the handle is unlocked.
+  * @returns {Promise}
+  */
   awaitUnlock() {
     return new Promise(resolve => {
       // check revursively whether the handler is unlocked
@@ -199,6 +291,10 @@ class Handle {
 }
 
 class StorageManager {
+  /**
+ * Constructs a StorageManager.
+ * @param {string} [root] Path to the directory that will be used for storage.
+ */
   constructor(root) {
     var storage_path = config.storage_path !== undefined ? config.storage_path : 'data';
     this.root = root !== undefined ? win32ToPosix(root) : win32ToPosix(storage_path);
@@ -207,6 +303,15 @@ class StorageManager {
     this.handles = {};
   }
 
+  /**
+ * Gets the Handle for a file.
+ * Not yet created handles will be created and stored.
+ * @param {boolean} [important] Whether this file is important or not.
+ * @param {string or STORAGE_TYPE} ... The path to the file to open.
+ *    Can be many strings or STORAGE_TYPEs chained after another.
+ *    Last string is the filename.
+ * @returns {Handle} The created or cached Handle.
+ */
   getHandle(important=false, ...args) {
     // make the important flag optional
     if (typeof important !== 'boolean') {
@@ -248,7 +353,9 @@ class StorageManager {
     }
     return res;
   }
-
+  /**
+  * Shorthand for getting a USER storage handle.
+  */
   getUserHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -258,6 +365,9 @@ class StorageManager {
     return this.getHandle(important, STORAGE_TYPE.USER, ...args);
   }
 
+  /**
+  * Shorthand for getting a GUILD storage handle.
+  */
   getGuildHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -267,6 +377,9 @@ class StorageManager {
     return this.getHandle(important, STORAGE_TYPE.GUILD, ...args);
   }
 
+  /**
+  * Shorthand for getting a CHANNEL storage handle.
+  */
   getChannelHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -276,6 +389,9 @@ class StorageManager {
     return this.getHandle(important, STORAGE_TYPE.CHANNEL, ...args);
   }
 
+  /**
+  * Shorthand for getting a MODULE storage handle.
+  */
   getModuleHandle(important=false, ...args) {
     if (typeof important !== 'boolean') {
       args.unshift(important);
@@ -285,6 +401,13 @@ class StorageManager {
     return this.getHandle(important, STORAGE_TYPE.MODULE, ...args);
   }
 
+  /**
+  * Initializes a file and the directories it is in, if those don't yet exist.
+  * @param {string} filePath Path to the file.
+  * @param {object} data Initial data the file should hold.
+  * @param {boolean} important Whether the file is important or not.
+  * @returns {Promise}
+  */
   initFile(filePath, data={}, important=false) {
     return new Promise((resolve, reject) => {
       fs.writeFile(filePath, JSON.stringify(data), (err) => {
@@ -330,6 +453,14 @@ class StorageManager {
     });
   }
 
+  /**
+  * Gets the data of a file. If it doesn't exist, the file wil be initialized.
+  * If the file isn't already cached, it will be cached.
+  * @param {string} path Path to the file.
+  * @param {object} initData Initial data the file should hold.
+  * @param {boolean} important Whether the file is important or not.
+  * @returns {Promise}
+  */
   getData(path, initData={}, important=false) {
     return new Promise((resolve, reject) => {
       var data;
@@ -386,6 +517,12 @@ class StorageManager {
     });
   }
 
+  /**
+  * Saves data to a file.
+  * @param {string} path Path to the file.
+  * @param {object} data The data the that should get saved.
+  * @returns {Promise}
+  */
   saveData(path, data) {
     return new Promise((resolve, reject) => {
       try {
@@ -407,20 +544,40 @@ class StorageManager {
     });
   }
 
+  /**
+  * Changes the important status of a cached file. If the file isn't cached,
+  * nothing will happen.
+  * @param {string} path Path to the file.
+  * @param {boolean} state State the important flag should be changed to.
+  */
   updateImportant(path, state) {
     if (this.cache[path] !== undefined) {
       this.cache[path]['important'] = state;
     }
   }
 
+  /**
+  * Checks whether a file is cached.
+  * @param {string} path Path to the file.
+  * @returns {boolean}
+  */
   isCached(path) {
     return this.cache[path] !== undefined;
   }
 
+  /**
+  * Checks whether a handle for a file exists.
+  * @param {string} path Path to the file.
+  * @returns {boolean}
+  */
   hasHandle(path) {
     return this.handles[path] !== undefined;
   }
 
+  /**
+  * Removes a file from cache.
+  * @param {string} path Path to the file.
+  */
   purgeCached(path) {
     return new Promise((resolve, reject) => {
       log.debug('trying to purge "' + path + '"')
@@ -461,6 +618,14 @@ class StorageManager {
         resolve();
       }
     });
+  }
+
+  /**
+  * Enum object for storagetypes
+  * @returns {object}
+  */
+  get STORAGE_TYPE() {
+    return STORAGE_TYPE;
   }
 }
 
