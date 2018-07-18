@@ -24,13 +24,13 @@ class CommandData {
 	 * @param {EventOrigin} origin Origin of command
 	 * @returns {EventOrigin|undefined} A new instance of CommandData or undefined if the command could not be parsed.
 	 */
-	static parse(str,origin) {
-		var [name,...args] = format.argSplit(str);
-		if(name){
+	static parse(str, origin) {
+		var [name, ...args] = format.argSplit(str);
+		if (name) {
 			var cmd;
 			//TODO: Find command-object
-			if(cmd){
-				return new CommandData(cmd,args,origin,str);
+			if (cmd) {
+				return new CommandData(cmd, args, origin, str);
 			}
 		}
 		return undefined;

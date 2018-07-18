@@ -5,47 +5,47 @@ const consts = require('../constants.js');
  * @private
  */
 var formatPosts = {
-	"int": (input, ...args)=>{
-		return parseInt(input,10);
+	"int": (input, ...args) => {
+		return parseInt(input, 10);
 	},
-	"float": (input, ...args)=>{
+	"float": (input, ...args) => {
 		return parseFloat(input);
 	},
-	"rnd": (input, ...args)=>{
-		var m = parseFloat(args[0]);
+	"rnd": (input, ...args) => {
+		let m = parseFloat(args[0]);
 		m = isNaN(m) ? 1 : m;
-		return Math.round(input*m)/m;
+		return Math.round(input * m) / m;
 	},
-	"flr": (input, ...args)=>{
-		var m = parseFloat(args[0]);
+	"flr": (input, ...args) => {
+		let m = parseFloat(args[0]);
 		m = isNaN(m) ? 1 : m;
-		return Math.floor(input*m)/m;
+		return Math.floor(input * m) / m;
 	},
-	"flr": (input, ...args)=>{
-		var m = parseFloat(args[0]);
+	"flr": (input, ...args) => {
+		let m = parseFloat(args[0]);
 		m = isNaN(m) ? 1 : m;
-		return Math.ceil(input*m)/m;
+		return Math.ceil(input * m) / m;
 	},
-	"mul": (input, ...args)=>{
-		var m = parseFloat(args[0]);
+	"mul": (input, ...args) => {
+		let m = parseFloat(args[0]);
 		m = isNaN(m) ? 1 : m;
-		return input*m;
+		return input * m;
 	},
-	"add": (input, ...args)=>{
-		var m = parseFloat(args[0]);
+	"add": (input, ...args) => {
+		let m = parseFloat(args[0]);
 		m = isNaN(m) ? 0 : m;
-		return input+m;
+		return input + m;
 	},
-	"hex": (input, ...args)=>{
-		return parseInt(input,10).toString(16);
+	"hex": (input, ...args) => {
+		return parseInt(input, 10).toString(16);
 	},
-	"utc": (input, ...args)=>{
+	"utc": (input, ...args) => {
 		return (new Date(input)).toUTCString();
 	},
-	"len": (input, ...args)=>{
-		if(typeof input === "object"){
+	"len": (input, ...args) => {
+		if (typeof input === "object") {
 			return Object.keys(input).length;
-		}else if(typeof input === "string"){
+		} else if (typeof input === "string") {
 			return input.length;
 		}
 		return 0;
@@ -59,13 +59,13 @@ var formatPosts = {
  * @returns {*} undefined when value doesn't exist in env
  * @private
  */
-function formatGetInEnv(arg,env){
+function formatGetInEnv(arg, env) {
 	var path = arg.split(".");
 	var obj = env;
 	//Descend down the object
-	for(var key of path){
+	for (var key of path) {
 		obj = obj[key];
-		if(obj===undefined){
+		if (obj === undefined) {
 			return undefined;
 		}
 	}
@@ -123,28 +123,28 @@ module.exports.format = (str, env) => {
 			var injectorParts = injectorStr.split("%").map(x => x.trim());
 
 			//Is at least one injectorpart present
-			if(injectorParts.length>0&&injectorParts[0]){
+			if (injectorParts.length > 0 && injectorParts[0]) {
 				//Get
-				var v = formatGetInEnv(injectorParts[0],env);
-				if(v!==undefined){
-					for(var i = 1;i < injectorParts.length;i++){
+				var v = formatGetInEnv(injectorParts[0], env);
+				if (v !== undefined) {
+					for (var i = 1; i < injectorParts.length; i++) {
 						var postParts = injectorParts[i].trim().split(" ");
 						var post = formatPosts[postParts[0].trim()];
-						if(post){
-							v = post(v,postParts.slice(1));
-						}else{
+						if (post) {
+							v = post(v, postParts.slice(1));
+						} else {
 							break;
 						}
 					}
 					out += v;
-				}else{
+				} else {
 					out += "undefined";
 				}
-			}else{
+			} else {
 				out += "undefined";
 			}
 			//Skip to end of injector
-			fIx=fEnd;
+			fIx = fEnd;
 		}
 
 		//Resume after fIx
@@ -160,7 +160,7 @@ module.exports.format = (str, env) => {
  * @param {object} env Environment used for inserting variables.
  * @returns {string} A new formatted string.
  */
-String.prototype.format = function(env) {
+String.prototype.format = function (env) {
 	return module.exports.format(this, env);
 }
 
@@ -187,7 +187,7 @@ module.exports.argSplit = (str) => {
 	}
 	for (var i = 0; i < str.length; i++) {
 		var c = str.charAt(i);
-		if(c != " ") {
+		if (c != " ") {
 			var arg;
 			var quote = consts.FORMAT_QUOTES.find(q => q === c);
 			var pair = consts.FORMAT_QUOTE_PAIRS.find(([start, end]) => start === quote);

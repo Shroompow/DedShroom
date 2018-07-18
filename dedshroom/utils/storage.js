@@ -68,13 +68,13 @@ function areEqual(o1, o2) {
 
 class Handle {
 	/**
- * Constructs a Handle. There is no need to create these.
- * These will be created by the StorageManager instance.
- * @param {string} path Path to the file this handle is for.
- * @param {object} initData Inital data if the file needs to be created.
- * @param {boolean} important Whether this file is important.
- * @param {StorageManager} manager Reference to the StorageManager that created this handle.
- */
+	 * Constructs a Handle. There is no need to create these.
+	 * These will be created by the StorageManager instance.
+	 * @param {string} path Path to the file this handle is for.
+	 * @param {object} initData Inital data if the file needs to be created.
+	 * @param {boolean} important Whether this file is important.
+	 * @param {StorageManager} manager Reference to the StorageManager that created this handle.
+	 */
 	constructor(path, initData, important, manager) {
 		this.path = path;
 		this.initData = initData;
@@ -164,24 +164,18 @@ class Handle {
 	* @returns {Promise}
 	*/
 	purge() {
-		return new Promise((resolve, reject) => {
-			this.manager.purgeCached(this.path).then(() => {
-				resolve();
-			}, (err) => {
-				reject(err);
-			});
-		});
+		return this.manager.purgeCached(this.path);
 	}
 
 	/**
- * Gets the Handle for a file that is inside of this Handle's directory.
- * Not yet created handles will be created and stored.
- * @param {boolean} [important] Whether this file is important or not.
- * @param {string or STORAGE_TYPE} ... The path to the file to open.
- *    Can be many strings or STORAGE_TYPEs chained after another.
- *    Last string is the filename.
- * @returns {Handle} The created or cached Handle.
- */
+	 * Gets the Handle for a file that is inside of this Handle's directory.
+	 * Not yet created handles will be created and stored.
+	 * @param {boolean} [important] Whether this file is important or not.
+	 * @param {string or STORAGE_TYPE} ... The path to the file to open.
+	 *    Can be many strings or STORAGE_TYPEs chained after another.
+	 *    Last string is the filename.
+	 * @returns {Handle} The created or cached Handle.
+	 */
 	getHandle(important=false, ...args) {
 		if (typeof important !== 'boolean') {
 			args.unshift(important);
@@ -292,9 +286,9 @@ class Handle {
 
 class StorageManager {
 	/**
- * Constructs a StorageManager.
- * @param {string} [root] Path to the directory that will be used for storage.
- */
+	 * Constructs a StorageManager.
+	 * @param {string} [root] Path to the directory that will be used for storage.
+	 */
 	constructor(root) {
 		var storage_path = config.storage_path !== undefined ? config.storage_path : 'data';
 		this.root = root !== undefined ? win32ToPosix(root) : win32ToPosix(storage_path);
@@ -304,14 +298,14 @@ class StorageManager {
 	}
 
 	/**
- * Gets the Handle for a file.
- * Not yet created handles will be created and stored.
- * @param {boolean} [important] Whether this file is important or not.
- * @param {string or STORAGE_TYPE} ... The path to the file to open.
- *    Can be many strings or STORAGE_TYPEs chained after another.
- *    Last string is the filename.
- * @returns {Handle} The created or cached Handle.
- */
+	 * Gets the Handle for a file.
+	 * Not yet created handles will be created and stored.
+	 * @param {boolean} [important] Whether this file is important or not.
+	 * @param {string or STORAGE_TYPE} ... The path to the file to open.
+	 *    Can be many strings or STORAGE_TYPEs chained after another.
+	 *    Last string is the filename.
+	 * @returns {Handle} The created or cached Handle.
+	 */
 	getHandle(important=false, ...args) {
 		// make the important flag optional
 		if (typeof important !== 'boolean') {

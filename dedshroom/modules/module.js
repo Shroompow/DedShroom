@@ -8,7 +8,7 @@ class Module extends Events {
 	 * @param {string} displayName DisplayName of the module
 	 * @param {boolean} nsfw Is the module nsfw?
 	 */
-	constructor(name, displayName="",nsfw=false) {
+	constructor(name, displayName = "", nsfw = false) {
 		/**Name of the module */
 		this.name = name;
 		/**Displayed name of the module */
@@ -20,16 +20,16 @@ class Module extends Events {
 	 * Initialize the Module
 	 * @param {State} state The bot-state
 	 */
-	init(state){
+	init(state) {
 		/**The state the module belongs too */
 		this.state = state;
 	}
 	/**Post Initialize Module */
-	postInit(){
+	postInit() {
 
 	}
 	/**Exit the Module */
-	exit(){
+	exit() {
 
 	}
 }

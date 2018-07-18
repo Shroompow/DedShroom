@@ -143,7 +143,7 @@ class Logger {
 	 * Is silenced?
 	 * @returns {boolean}
 	 */
-	isSilenced(){
+	isSilenced() {
 		return this.silenced;
 	}
 
@@ -157,9 +157,9 @@ class Logger {
 		if (!this.silenced) {
 			// check if the log level is enabled
 			if (level >= this.level) {
-				var env = makeEnv(this.namespace, level, msg.toString());
-				var logMessage = this.manager.format.format(env);
-				if(level<LEVEL.WARNING)
+				let env = makeEnv(this.namespace, level, msg.toString());
+				let logMessage = this.manager.format.format(env);
+				if (level < LEVEL.WARNING)
 					console.log(logMessage);
 				else
 					console.error(logMessage);

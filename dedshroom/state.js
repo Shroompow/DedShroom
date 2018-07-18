@@ -1,5 +1,9 @@
 const discord = require('discord.js');
 const constants = require('./constants.js');
+const logging = require('./utils/logging.js');
+
+const log = logging.get("State");
+
 class State {
 	/**
 	 * Constructs State
@@ -30,25 +34,25 @@ class State {
 	start(token){
 		return Promise((resolve,reject)=>{
 			if(this.running){resolve();return;}
-			console.log("Starting State");
+			log.info("Starting State");
 			//Loading indexes
-			var languagesIndex;
-			var modulesIndex;
+			let languagesIndex;
+			let modulesIndex;
 			try{
-				console.log("Loading LanguageIndex");
+				log.info("Loading LanguageIndex");
 				languagesIndex = this.indexes["languages"] = require(constants.FILE_LANGUAGES);
-				console.log("Loading ModuleIndex");
+				log.info("Loading ModuleIndex");
 				modulesIndex = this.indexes["modules"] = require(constants.FILE_MODULES);
 			}catch(e){
-				console.error("Error on loading Indexes",e.message);
-				reject();
+				log.critical("Error on loading Indexes",e.message);
+				reject(e);
 				return;
 			}
 
 			try{
-				console.log("Loading Languages");
+				log.info("Loading Languages");
 				//Processing LanguageIndex
-				for(var k in languagesIndex){
+				for(let k in languagesIndex){
 					//hasOwnProperty to check if the property wasn't inherited from a baseclass
 					if(languagesIndex.hasOwnProperty(k)){
 						if(k=="default"){
@@ -59,40 +63,38 @@ class State {
 					}
 				}
 			}catch(e){
-				console.error(`Error on loading language-file`,e.message);
-				reject();
+				reject(e);
 				return;
 			}
 
 			try{
-				console.log("Loading Modules");
+				log.info("Loading Modules");
 				//Processing ModuleIndex
-				for(var k in modulesIndex){
+				for(let k in modulesIndex){
 					//hasOwnProperty to check if the property wasn't inherited from a baseclass
 					if(modulesIndex.hasOwnProperty(k)){
-						var mx = modulesIndex[k];
-						var mclass = require(constants.DIR_MODULES+mx.name);
+						let mx = modulesIndex[k];
+						let mclass = require(constants.DIR_MODULES+mx.name);
 						this.modules[mx.name] = new mclass(mx.name,mx.displayName,mx.nsfw);
 					}
 				}
 			}catch(e){
-				console.error(`Error on loading module`,e.message);
-				reject();
+				reject(e);
 				return;
 			}
 
-			console.log("Initializing Modules");
-			for(var k in this.modules){
+			log.info("Initializing Modules");
+			for(let k in this.modules){
 				this.modules[k].init(this);
 			}
 
-			console.log("PostInitializing Modules")
-			for(var k in this.modules){
+			log.info("PostInitializing Modules")
+			for(let k in this.modules){
 				this.modules[k].postInit();
 			}
 
 			this.running = true;
-			resolve();
+			resolve(this);
 		});
 	}
 	/**
@@ -104,13 +106,15 @@ class State {
 		return Promise((resolve)=>{
 			if(!this.running){resolve();}
 
-			console.log(`Exiting State (force:${force})`);
+			log.info(`Exiting State (force:${force})`);
 
-			if(!force){
+			if(!force || true){
 				for(var k in this.modules){
 					this.modules[k].exit();
 				}
 				this.modules = {};
+			}else{
+				//TODO: Force behaviour.
 			}
 
 			this.running = false;

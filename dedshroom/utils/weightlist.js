@@ -16,8 +16,8 @@ class WeightList {
 			//Import raw data
 			this.data = init;
 			//Check data
-			for (var i = 0; i < this.data.length; i++) {
-				var pair = this.data[i];
+			for (let i = 0; i < this.data.length; i++) {
+				let pair = this.data[i];
 				if (typeof pair === "object" && pair.x && typeof pair.y === "number") {
 					//Apply weight-minimum of 0
 					pair.y = Math.max(0, pair.y);
@@ -32,8 +32,8 @@ class WeightList {
 		} else if (init instanceof WeightList) {
 			//Copy data
 			this._weightSum = init.weightSum();
-			for (var i = 0; i < init.data.length; i++) {
-				var pair = init.data[i];
+			for (let i = 0; i < init.data.length; i++) {
+				let pair = init.data[i];
 				this.data.push({ x: pair.x, y: pair.y });
 			}
 		}
@@ -60,7 +60,7 @@ class WeightList {
 	 * @returns {number} The index of the inserted pair.
 	 */
 	push(element, weight = 1) {
-		var w = Math.max(0, weight);
+		let w = Math.max(0, weight);
 		this._weightSum += w;
 		return this.data.push({ x: element, y: w }) - 1;
 	}
@@ -71,7 +71,7 @@ class WeightList {
 	 * @returns {*} Element of the removed pair or undefined.
 	 */
 	remove(index) {
-		var pair = this.data[index];
+		let pair = this.data[index];
 		if (pair) {
 			this.data.splice(index);
 			return pair.x;
@@ -84,11 +84,8 @@ class WeightList {
 	 * @returns {Object} The element or undefined.
 	 */
 	get(index) {
-		var pair = this.data[index];
-		if (pair) {
-			return pair.x;
-		}
-		return undefined;
+		let pair = this.data[index];
+		return pair ? pair.x : undefined;
 	}
 
 	/**
@@ -96,11 +93,8 @@ class WeightList {
 	 * @returns {number} The weight of a pair or 0.
 	 */
 	weightOf(index) {
-		var pair = this.data[index];
-		if (pair) {
-			return pair.y;
-		}
-		return 0;
+		let pair = this.data[index];
+		return pair ? pair.y : 0;
 	}
 
 	/**
@@ -108,13 +102,13 @@ class WeightList {
 	 * @returns {*} The element.
 	 */
 	getWeighted(factor) {
-		var weightSum = this.weightSum();
-		var targetWeight = Math.max(0, Math.min(weightSum, factor * weightSum));
+		let weightSum = this.weightSum();
+		let targetWeight = Math.max(0, Math.min(weightSum, factor * weightSum));
 
-		var currWeight = 0;
+		let currWeight = 0;
 		//Linear search
-		for (var i = 0; i < this.data.length; i++) {
-			var pair = this.data[i];
+		for (let i = 0; i < this.data.length; i++) {
+			let pair = this.data[i];
 			//Add weight of pair to currWeight
 			//Reached target?
 			if ((currWeight += pair.y) >= targetWeight) {
