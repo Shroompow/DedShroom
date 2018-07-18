@@ -14,6 +14,22 @@ Results in:
 //Data to initialize bot with
 var initData = {};
 
+function loadConfig(f){
+	let s = fs.statSync(f);
+	if(!s.isFile){
+		console.error(`Config file "${f}" does not exist`);
+		process.exit();
+	}
+	let cnt = fs.readFileSync(f,{encoding:"utf8"});
+	try{
+		let cfg = JSON.parse(cnt);
+		initData.config = cfg;
+	}catch(err){
+		console.error("Error on parsing config file\n",err.message);
+		process.exit();
+	}
+}
+
 //Argument Processors
 const argprocessors = {
 	help: (v)=>{
@@ -27,35 +43,42 @@ const argprocessors = {
 			console.error(`Argument "cfg" needs to be set`);
 			process.exit();
 		}
-		var s = fs.statSync(v);
-		if(!s.isFile){
-			console.error(`Config file "${v}" does not exist`);
-			process.exit();
-		}
-		var cnt = fs.readFileSync(v,{encoding:"utf8"});
-		try{
-			var cfg = JSON.parse(cnt);
-			initData.config = cfg;
-		}catch(err){
-			console.error("Error on parsing config file\n",err.message);
-			process.exit();
-		}
+		loadConfig(v);
 	}
 };
 
 //Process Arguments
-for(var i = 2;i < process.argv.length;i++){
+for(let i = 2;i < process.argv.length;i++){
 	//Split arguments like "foo=bar" into argBase="foo" and argVal="bar"
-	var v = process.argv[i];
-	var splitPoint = v.indexOf("=");
+	let v = process.argv[i];
+	let splitPoint = v.indexOf("=");
 	splitPoint = splitPoint == -1 ? v.length : splitPoint;
-	var argBase = v.slice(0,splitPoint).trim().toLowerCase();
-	var argVal = v.slice(splitPoint+1,v.length).trim();
+	let argBase = v.slice(0,splitPoint).trim().toLowerCase();
+	let argVal = v.slice(splitPoint+1,v.length).trim();
 	//Process Argument
-	var argProcessor = argprocessors[argBase];
+	let argProcessor = argprocessors[argBase];
 	if(!argProcessor){
 		console.error(`Invalid argument "${argBase}"`);
 		process.exit(0);
 	}
 	argProcessor(argVal);
 }
+
+//PostValidation
+
+if(!initData.config){
+	loadConfig("./config.json");
+}
+
+if(!initData.config.token){
+	console.error('"token" is required in config');
+	process.exit();
+}
+
+//Launching Bot
+
+console.log("Loading Bot");
+const State = require('./state.js');
+let state = new State();
+console.log("Starting Bot");
+state.start().then(console.log).catch(console.error);
