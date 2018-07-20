@@ -8,7 +8,7 @@ module.exports = {
 		{ x: "But sometimes also beep", y: 0.5 }
 	]),//Test with (x instanceof WeightList)
 	//
-	"err.common": "An Error occured. **errID:** `${errid}`\nError Message: `${errMsg}`",
-	"err.session": "An Error occured in the Session. **errID:** `${errid}`\nError Message: `${errMsg}`",
-	"err.command": "An Error occured while performing the Command. **errID:** `${errid}`\nError Message: `${errMsg}`"
+	"err.common": "An Error occured. **errID:** `${errid}`\n`${errMsg}`",
+	"err.session": "An Error occured in the Session. **errID:** `${errid}`\n`${errMsg}`",
+	"err.command": "An Error occured while performing the Command. **errID:** `${errid}`\n`${errMsg}`"
 }

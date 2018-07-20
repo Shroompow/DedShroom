@@ -1,6 +1,7 @@
 const discord = require('discord.js');
 const constants = require('./constants.js');
 const logging = require('./utils/logging.js');
+const Languages = require('./utils/lang.js');
 
 const log = logging.get("State");
 
@@ -18,10 +19,6 @@ class State {
 		/**All active sessions stored as sessionID => Session */
 		this.sessions = {};
 		this.indexes = {};
-		/**All languages stored as name => {} */
-		this.languages = {};
-		/**Name of the default language */
-		this.defaultLanguage = "";
 		/**Is the state running? */
 		this.running = false;
 	}
@@ -32,7 +29,7 @@ class State {
 	 * @param {string} token The token to login with
 	 */
 	start(token){
-		return Promise((resolve,reject)=>{
+		return new Promise((resolve,reject)=>{
 			if(this.running){resolve();return;}
 			log.info("Starting State");
 			//Loading indexes
@@ -52,16 +49,19 @@ class State {
 			try{
 				log.info("Loading Languages");
 				//Processing LanguageIndex
+				let defaultLanguage = "english";
+				let languages = {};
 				for(let k in languagesIndex){
 					//hasOwnProperty to check if the property wasn't inherited from a baseclass
 					if(languagesIndex.hasOwnProperty(k)){
 						if(k=="default"){
-							this.defaultLanguage = languagesIndex[k];
+							defaultLanguage = languagesIndex[k];
 						}else{
-							this.languages[k] = require(constants.DIR_LANG+languagesIndex[k]);
+							languages[k] = require(constants.DIR_LANG+languagesIndex[k]);
 						}
 					}
 				}
+				this.lang = new Languages(languages,languages[defaultLanguage]);
 			}catch(e){
 				reject(e);
 				return;
