@@ -75,7 +75,7 @@ function formatGetInEnv(arg, env) {
 /**
  * Formats a string.
  * @param {string} str String to be formatted.
- * @param {object} env Environment used for inserting variables.
+ * @param {object|Array} env Environment used for inserting variables.
  * @returns {string} A new formatted string.
  * @example
 ```js
@@ -91,7 +91,12 @@ format(
 module.exports.format = (str, env) => {
 	var out = "";
 	var fIx = 0;
-
+	var envs;
+	if (Array.isArray(env)) {
+		envs = env;
+	} else {
+		envs = [env];
+	}
 	for (var i = 0; i < str.length; i++) {
 		//Search for injectors starting at fIx not being escaped by an \
 		var srchIx = i;
@@ -125,7 +130,12 @@ module.exports.format = (str, env) => {
 			//Is at least one injectorpart present
 			if (injectorParts.length > 0 && injectorParts[0]) {
 				//Get
-				var v = formatGetInEnv(injectorParts[0], env);
+				var v;
+				for (let i = 0; i < envs.length; i++) {
+					if ((v = formatGetInEnv(injectorParts[0], envs[i])) !== undefined) {
+						break;
+					}
+				}
 				if (v !== undefined) {
 					for (var i = 1; i < injectorParts.length; i++) {
 						var postParts = injectorParts[i].trim().split(" ");
