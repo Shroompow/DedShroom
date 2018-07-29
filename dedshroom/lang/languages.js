@@ -1,4 +1,5 @@
 module.exports = {
 	"default" : "english",
-	"english" : "english.js"
+	"english" : "english.js",
+	"en_offensive" : "english_offensive.js"
 }
