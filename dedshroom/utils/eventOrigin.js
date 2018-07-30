@@ -67,5 +67,12 @@ class EventOrigin {
 		}
 	}
 
+	/**
+	 * Shorthand for checking channel.type === 'dm'
+	 * @returns {boolean}
+	 */
+	isDM(){
+		return this.channel ? (this.channel.type === 'dm') : false;
+	}
 
 }
