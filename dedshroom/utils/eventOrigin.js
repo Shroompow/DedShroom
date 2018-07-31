@@ -43,16 +43,11 @@ class EventOrigin {
 
 	set channel(c) {
 		if (typeof c === "string") {
-			if (this.guild) {
-				//Guild is set
-				//TODO: Get Channel-Object from Guild
-			} else {
-				//Guild is not set. Possibly DM-Channel
-				//TODO: Try to find Channel-Object
-			}
+			//TODO: Find channel
 		} else {
 			this._channel = c;
 		}
+		//TODO: Update this.guild accordingly
 	}
 
 	get user() {
