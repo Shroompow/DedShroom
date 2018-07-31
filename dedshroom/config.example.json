@@ -1,3 +1,5 @@
 {
-	"token": "BOT-TOKEN"
+	"token": "BOT-TOKEN",
+	"superadmins": ["optional USER-ID (Grants full control over bot)"],
+	"debuggers": ["USER-ID (Grants access to Debugging Info)"]
 }
